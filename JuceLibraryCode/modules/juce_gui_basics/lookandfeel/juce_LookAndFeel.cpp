@@ -101,7 +101,7 @@ namespace LookAndFeelHelpers
 
         AttributedString s;
         s.setJustification (Justification::centred);
-        s.append (text, Font (tooltipFontSize, Font::bold));
+        s.append (text, Font (tooltipFontSize, "Bold"));
 
         TextLayout tl;
         tl.createLayoutWithBalancedLineLengths (s, (float) maxToolTipWidth);
@@ -311,10 +311,11 @@ void LookAndFeel::setDefaultLookAndFeel (LookAndFeel* newDefaultLookAndFeel) noe
 //==============================================================================
 const Typeface::Ptr LookAndFeel::getTypefaceForFont (const Font& font)
 {
-    if (defaultSans.isNotEmpty() && font.getTypefaceName() == Font::getDefaultSansSerifFontName())
+    if (defaultSans.isNotEmpty() && font.getTypefaceFamily() == Font::getDefaultSansSerifFamily())
     {
         Font f (font);
-        f.setTypefaceName (defaultSans);
+        f.setTypefaceFamily (defaultSans);
+        f.setTypefaceStyle (Font::getDefaultStyle());
         return Typeface::createSystemTypefaceFor (f);
     }
 
@@ -564,7 +565,7 @@ void LookAndFeel::drawAlertBox (Graphics& g,
         }
 
         GlyphArrangement ga;
-        ga.addFittedText (Font (iconRect.getHeight() * 0.9f, Font::bold),
+        ga.addFittedText (Font (iconRect.getHeight() * 0.9f, "Bold"),
                           String::charToString ((juce_wchar) (uint8) character),
                           (float) iconRect.getX(), (float) iconRect.getY(),
                           (float) iconRect.getWidth(), (float) iconRect.getHeight(),
@@ -1799,7 +1800,7 @@ void LookAndFeel::drawDocumentWindowTitleBar (DocumentWindow& window,
                                        0.0f, (float) h, false));
     g.fillAll();
 
-    Font font (h * 0.65f, Font::bold);
+    Font font (h * 0.65f, "Bold");
     g.setFont (font);
 
     int textW = font.getStringWidth (window.getName());
@@ -2447,7 +2448,7 @@ void LookAndFeel::drawTableHeaderColumn (Graphics& g, const String& columnName, 
     }
 
     g.setColour (Colours::black);
-    g.setFont (height * 0.5f, Font::bold);
+    g.setFont (height * 0.5f, "Bold");
     const int textX = 4;
     g.drawFittedText (columnName, textX, 0, rightOfText - textX, height, Justification::centredLeft, 1);
 }
@@ -2508,7 +2509,7 @@ void LookAndFeel::drawPropertyPanelSectionHeader (Graphics& g, const String& nam
     const int textX = buttonIndent * 2 + buttonSize + 2;
 
     g.setColour (Colours::black);
-    g.setFont (height * 0.7f, Font::bold);
+    g.setFont (height * 0.7f, "Bold");
     g.drawText (name, textX, 0, width - textX - 4, height, Justification::centredLeft, true);
 }
 
@@ -2571,7 +2572,7 @@ void LookAndFeel::createFileChooserHeaderText (const String& title,
 {
     text.clear();
 
-    text.addJustifiedText (Font (17.0f, Font::bold), title,
+    text.addJustifiedText (Font (17.0f, "Bold"), title,
                            8.0f, 22.0f, width - 16.0f,
                            Justification::centred);
 

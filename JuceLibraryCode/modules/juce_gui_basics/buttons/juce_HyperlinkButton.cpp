@@ -28,20 +28,22 @@ HyperlinkButton::HyperlinkButton (const String& linkText,
                                   const URL& linkURL)
    : Button (linkText),
      url (linkURL),
-     font (14.0f, Font::underlined),
+     font (14.0f),
      resizeFont (true),
      justification (Justification::centred)
 {
+    font.setUnderline (true);
     setMouseCursor (MouseCursor::PointingHandCursor);
     setTooltip (linkURL.toString (false));
 }
 
 HyperlinkButton::HyperlinkButton ()
    : Button (String::empty),
-     font (14.0f, Font::underlined),
+     font (14.0f),
      resizeFont (true),
      justification (Justification::centred)
 {
+    font.setUnderline (true);
     setMouseCursor (MouseCursor::PointingHandCursor);
 }
 

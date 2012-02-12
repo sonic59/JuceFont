@@ -62,28 +62,133 @@ namespace FontEnumerators
     }
 }
 
-StringArray Font::findAllTypefaceNames()
+StringArray Font::findAllTypefaceFamilies()
 {
     StringArray results;
-    HDC dc = CreateCompatibleDC (0);
+    #if JUCE_USE_DIRECTWRITE
+    const Direct2DFactories& factories = Direct2DFactories::getInstance();
 
+    if (factories.systemFonts != nullptr)
     {
-        LOGFONTW lf = { 0 };
-        lf.lfWeight = FW_DONTCARE;
-        lf.lfOutPrecision = OUT_OUTLINE_PRECIS;
-        lf.lfQuality = DEFAULT_QUALITY;
-        lf.lfCharSet = DEFAULT_CHARSET;
-        lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
-        lf.lfPitchAndFamily = FF_DONTCARE;
+        ComSmartPtr<IDWriteFontFamily> dwFontFamily;
+        uint32 fontFamilyCount = 0;
+        fontFamilyCount = factories.systemFonts->GetFontFamilyCount();
 
-        EnumFontFamiliesEx (dc, &lf,
-                            (FONTENUMPROCW) &FontEnumerators::fontEnum1,
-                            (LPARAM) &results, 0);
+        for (uint32 i = 0; i < fontFamilyCount; ++i)
+        {
+                HRESULT hr = factories.systemFonts->GetFontFamily (i, dwFontFamily.resetAndGetPointerAddress());
+
+                ComSmartPtr<IDWriteLocalizedStrings> dwFamilyNames;
+                hr = dwFontFamily->GetFamilyNames (dwFamilyNames.resetAndGetPointerAddress());
+                jassert (dwFamilyNames != nullptr);
+
+                uint32 index = 0;
+                BOOL exists = false;
+                hr = dwFamilyNames->FindLocaleName (L"en-us", &index, &exists);
+                if (! exists)
+                    index = 0;
+
+                uint32 length = 0;
+                hr = dwFamilyNames->GetStringLength (index, &length);
+
+                HeapBlock <wchar_t> familyName (length + 1);
+                hr = dwFamilyNames->GetString (index, familyName, length + 1);
+
+                results.add(String (familyName));
+        }
+    }
+    else
+    #endif
+    {
+        HDC dc = CreateCompatibleDC (0);
+
+        {
+            LOGFONTW lf = { 0 };
+            lf.lfWeight = FW_DONTCARE;
+            lf.lfOutPrecision = OUT_OUTLINE_PRECIS;
+            lf.lfQuality = DEFAULT_QUALITY;
+            lf.lfCharSet = DEFAULT_CHARSET;
+            lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+            lf.lfPitchAndFamily = FF_DONTCARE;
+
+            EnumFontFamiliesEx (dc, &lf,
+                                (FONTENUMPROCW) &FontEnumerators::fontEnum1,
+                                (LPARAM) &results, 0);
+        }
+
+        DeleteDC (dc);
     }
 
-    DeleteDC (dc);
-
     results.sort (true);
+    return results;
+}
+
+StringArray Font::findAllTypefaceStyles(const String& family)
+{
+    StringArray results;
+
+    #if JUCE_USE_DIRECTWRITE
+    const Direct2DFactories& factories = Direct2DFactories::getInstance();
+
+    if (factories.systemFonts != nullptr)
+    {
+        BOOL fontFound = false;
+        uint32 fontIndex = 0;
+        HRESULT hr = factories.systemFonts->FindFamilyName (family.toWideCharPointer(), &fontIndex, &fontFound);
+        if (! fontFound)
+            fontIndex = 0;
+
+        // Get the font family using the search results
+        // Fonts like: Times New Roman, Times New Roman Bold, Times New Roman Italic are all in the same font family
+        ComSmartPtr<IDWriteFontFamily> dwFontFamily;
+        hr = factories.systemFonts->GetFontFamily (fontIndex, dwFontFamily.resetAndGetPointerAddress());
+
+        // Get the font faces
+        ComSmartPtr<IDWriteFont> dwFont;
+        uint32 fontFacesCount = 0;
+        fontFacesCount = dwFontFamily->GetFontCount();
+
+        for (uint32 i = 0; i < fontFacesCount; ++i)
+        {
+                hr = dwFontFamily->GetFont (i, dwFont.resetAndGetPointerAddress());
+
+                ComSmartPtr<IDWriteLocalizedStrings> dwFaceNames;
+                hr = dwFont->GetFaceNames (dwFaceNames.resetAndGetPointerAddress());
+                jassert (dwFaceNames != nullptr);
+
+                uint32 index = 0;
+                BOOL exists = false;
+                hr = dwFaceNames->FindLocaleName (L"en-us", &index, &exists);
+                if (! exists)
+                    index = 0;
+
+                uint32 length = 0;
+                hr = dwFaceNames->GetStringLength (index, &length);
+
+                HeapBlock <wchar_t> styleName (length + 1);
+                hr = dwFaceNames->GetString (index, styleName, length + 1);
+
+                String style (styleName);
+
+                // For unknown reasons, has multiple styles named "Narrow". These styles don't show up in any
+                // other software or in any other fonts families. We will ignore them.
+                if (style == "Narrow") continue;
+                // DirectWrite automatically adds extra bold and oblique font styles which are algorithmic
+                // style simulations. These styles don't show up in any other software. We will ignore them.
+                if (dwFont->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) continue;
+
+                results.add(style);
+        }
+    }
+    else
+    #endif
+    {
+        results.add ("Regular");
+        results.add ("Italic");
+        results.add ("Bold");
+        results.add ("Bold Italic");
+    }
+
     return results;
 }
 
@@ -116,14 +221,17 @@ Typeface::Ptr Font::getDefaultTypefaceForFont (const Font& font)
 {
     static DefaultFontNames defaultNames;
 
-    String faceName (font.getTypefaceName());
+    String family (font.getTypefaceFamily());
+    String style (font.getTypefaceStyle());
 
-    if (faceName == Font::getDefaultSansSerifFontName())       faceName = defaultNames.defaultSans;
-    else if (faceName == Font::getDefaultSerifFontName())      faceName = defaultNames.defaultSerif;
-    else if (faceName == Font::getDefaultMonospacedFontName()) faceName = defaultNames.defaultFixed;
+    if (family == Font::getDefaultSansSerifFamily())       family = defaultNames.defaultSans;
+    else if (family == Font::getDefaultSerifFamily())      family = defaultNames.defaultSerif;
+    else if (family == Font::getDefaultMonospacedFamily()) family = defaultNames.defaultFixed;
+    if (style == Font::getDefaultStyle())                  style  = "Regular";
 
     Font f (font);
-    f.setTypefaceName (faceName);
+    f.setTypefaceFamily (family);
+    f.setTypefaceStyle (style);
     return Typeface::createSystemTypefaceFor (f);
 }
 
@@ -132,14 +240,12 @@ class WindowsTypeface   : public Typeface
 {
 public:
     WindowsTypeface (const Font& font)
-        : Typeface (font.getTypefaceName()),
+        : Typeface (font.getTypefaceFamily(), font.getTypefaceStyle()),
           fontH (0),
           previousFontH (0),
           dc (CreateCompatibleDC (0)),
           ascent (1.0f),
-          defaultGlyph (-1),
-          bold (font.isBold()),
-          italic (font.isItalic())
+          defaultGlyph (-1)
     {
         loadFont();
 
@@ -282,7 +388,6 @@ private:
     TEXTMETRIC tm;
     float ascent;
     int defaultGlyph;
-    bool bold, italic;
 
     struct KerningPair
     {
@@ -314,10 +419,10 @@ private:
         lf.lfOutPrecision = OUT_OUTLINE_PRECIS;
         lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
         lf.lfQuality = PROOF_QUALITY;
-        lf.lfItalic = (BYTE) (italic ? TRUE : FALSE);
-        lf.lfWeight = bold ? FW_BOLD : FW_NORMAL;
+        lf.lfItalic = (BYTE) (style == "Italic" ? TRUE : FALSE);
+        lf.lfWeight = style == "Bold" ? FW_BOLD : FW_NORMAL;
         lf.lfHeight = -256;
-        name.copyToUTF16 (lf.lfFaceName, sizeof (lf.lfFaceName));
+        family.copyToUTF16 (lf.lfFaceName, sizeof (lf.lfFaceName));
 
         HFONT standardSizedFont = CreateFontIndirect (&lf);
 

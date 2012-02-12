@@ -30,7 +30,7 @@ class Slider::PopupDisplayComponent  : public BubbleComponent,
 public:
     PopupDisplayComponent (Slider& owner_)
         : owner (owner_),
-          font (15.0f, Font::bold)
+          font (15.0f, "Bold")
     {
         setAlwaysOnTop (true);
     }

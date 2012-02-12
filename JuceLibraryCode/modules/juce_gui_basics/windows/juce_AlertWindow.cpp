@@ -393,7 +393,7 @@ void AlertWindow::updateLayout (const bool onlyIncreaseSize)
     int iconSpace = 0;
 
     AttributedString attributedText;
-    attributedText.append (getName(), Font (font.getHeight() * 1.1f, Font::bold));
+    attributedText.append (getName(), Font (font.getHeight() * 1.1f, "Bold"));
 
     if (text.isNotEmpty())
         attributedText.append ("\n\n" + text, font);

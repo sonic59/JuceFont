@@ -47,7 +47,7 @@
 #endif
 
 #ifndef    JUCE_USE_DIRECTWRITE
- //#define JUCE_USE_DIRECTWRITE
+ #define JUCE_USE_DIRECTWRITE 1
 #endif
 
 //==============================================================================

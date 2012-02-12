@@ -86,29 +86,49 @@ class WindowsDirectWriteTypeface  : public Typeface
 {
 public:
     WindowsDirectWriteTypeface (const Font& font, IDWriteFontCollection* fontCollection)
-        : Typeface (font.getTypefaceName()),
+        : Typeface (font.getTypefaceFamily(), font.getTypefaceStyle()),
           ascent (0.0f)
     {
         jassert (fontCollection != nullptr);
 
         BOOL fontFound = false;
         uint32 fontIndex = 0;
-        Logger::outputDebugString("Search for font: " + font.getTypefaceName());
-        HRESULT hr = fontCollection->FindFamilyName (font.getTypefaceName().toWideCharPointer(), &fontIndex, &fontFound);
+        HRESULT hr = fontCollection->FindFamilyName (font.getTypefaceFamily().toWideCharPointer(), &fontIndex, &fontFound);
         if (! fontFound)
             fontIndex = 0;
-        if (! fontFound) Logger::outputDebugString("font not found");
+
         // Get the font family using the search results
         // Fonts like: Times New Roman, Times New Roman Bold, Times New Roman Italic are all in the same font family
         ComSmartPtr<IDWriteFontFamily> dwFontFamily;
         hr = fontCollection->GetFontFamily (fontIndex, dwFontFamily.resetAndGetPointerAddress());
 
-        // Get a specific font in the font family using certain weight and style flags
+        // Get a specific font in the font family using typeface style
         ComSmartPtr<IDWriteFont> dwFont;
-        DWRITE_FONT_WEIGHT dwWeight = font.isBold() ? DWRITE_FONT_WEIGHT_BOLD  : DWRITE_FONT_WEIGHT_NORMAL;
-        DWRITE_FONT_STYLE dwStyle = font.isItalic() ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL;
+        uint32 fontFacesCount = 0;
+        fontFacesCount = dwFontFamily->GetFontCount();
 
-        hr = dwFontFamily->GetFirstMatchingFont (dwWeight, DWRITE_FONT_STRETCH_NORMAL, dwStyle, dwFont.resetAndGetPointerAddress());
+        for (uint32 i = 0; i < fontFacesCount; ++i)
+        {
+                hr = dwFontFamily->GetFont (i, dwFont.resetAndGetPointerAddress());
+
+                ComSmartPtr<IDWriteLocalizedStrings> dwFaceNames;
+                hr = dwFont->GetFaceNames (dwFaceNames.resetAndGetPointerAddress());
+                jassert (dwFaceNames != nullptr);
+
+                uint32 index = 0;
+                BOOL exists = false;
+                hr = dwFaceNames->FindLocaleName (L"en-us", &index, &exists);
+                if (! exists)
+                    index = 0;
+
+                uint32 length = 0;
+                hr = dwFaceNames->GetStringLength (index, &length);
+
+                HeapBlock <wchar_t> styleName (length + 1);
+                hr = dwFaceNames->GetString (index, styleName, length + 1);
+
+                if (font.getTypefaceStyle() == String (styleName)) break;
+        }
         hr = dwFont->CreateFontFace (dwFontFace.resetAndGetPointerAddress());
 
         DWRITE_FONT_METRICS dwFontMetrics;

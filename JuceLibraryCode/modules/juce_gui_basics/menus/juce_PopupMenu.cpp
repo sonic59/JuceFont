@@ -1313,7 +1313,7 @@ public:
     void paint (Graphics& g)
     {
         Font f (getLookAndFeel().getPopupMenuFont());
-        f.setBold (true);
+        f.setTypefaceStyle ("Bold");
         g.setFont (f);
         g.setColour (findColour (PopupMenu::headerTextColourId));
 

@@ -42,7 +42,7 @@ WindowComponent::WindowComponent ()
 {
     addAndMakeVisible (lblFamily = new Label (L"lblFamily",
                                               L"Font Family"));
-    lblFamily->setFont (Font (15.0000f, Font::plain));
+    lblFamily->setFont (Font (15.0000f));
     lblFamily->setJustificationType (Justification::centredLeft);
     lblFamily->setEditable (false, false, false);
     lblFamily->setColour (TextEditor::textColourId, Colours::black);
@@ -57,7 +57,7 @@ WindowComponent::WindowComponent ()
 
     addAndMakeVisible (lblStyle = new Label (L"lblStyle",
                                              L"Font Style"));
-    lblStyle->setFont (Font (15.0000f, Font::plain));
+    lblStyle->setFont (Font (15.0000f));
     lblStyle->setJustificationType (Justification::centredLeft);
     lblStyle->setEditable (false, false, false);
     lblStyle->setColour (TextEditor::textColourId, Colours::black);
@@ -72,7 +72,7 @@ WindowComponent::WindowComponent ()
 
     addAndMakeVisible (lblHeight = new Label (L"lblHeight",
                                               L"Font Height"));
-    lblHeight->setFont (Font (15.0000f, Font::plain));
+    lblHeight->setFont (Font (15.0000f));
     lblHeight->setJustificationType (Justification::centredLeft);
     lblHeight->setEditable (false, false, false);
     lblHeight->setColour (TextEditor::textColourId, Colours::black);
@@ -83,7 +83,7 @@ WindowComponent::WindowComponent ()
 
     addAndMakeVisible (lblSample = new Label (L"lblSample",
                                               L"The quick brown fox jumps over the lazy dog"));
-    lblSample->setFont (Font (15.0000f, Font::plain));
+    lblSample->setFont (Font (15.0000f));
     lblSample->setJustificationType (Justification::centredLeft);
     lblSample->setEditable (false, false, false);
     lblSample->setColour (TextEditor::textColourId, Colours::black);
@@ -113,6 +113,8 @@ WindowComponent::WindowComponent ()
 
 
     //[Constructor] You can add your own custom stuff here..
+    cmbFamily->addItemList(Font::findAllTypefaceFamilies(), 1);
+    cmbFamily->setText("Verdana");
     //[/Constructor]
 }
 
@@ -171,11 +173,21 @@ void WindowComponent::comboBoxChanged (ComboBox* comboBoxThatHasChanged)
     if (comboBoxThatHasChanged == cmbFamily)
     {
         //[UserComboBoxCode_cmbFamily] -- add your combo box handling code here..
+        cmbStyle->clear();
+        cmbStyle->addItemList(Font::findAllTypefaceStyles(cmbFamily->getText()), 1);
+        cmbStyle->setSelectedItemIndex(0);
+        font.setTypefaceFamily(cmbFamily->getText());
+        font.setTypefaceStyle(cmbStyle->getText());
+        lblSample->setFont(font);
+        txtSample->applyFontToAllText(font);
         //[/UserComboBoxCode_cmbFamily]
     }
     else if (comboBoxThatHasChanged == cmbStyle)
     {
         //[UserComboBoxCode_cmbStyle] -- add your combo box handling code here..
+        font.setTypefaceStyle(cmbStyle->getText());
+        lblSample->setFont(font);
+        txtSample->applyFontToAllText(font);
         //[/UserComboBoxCode_cmbStyle]
     }
 

@@ -128,7 +128,7 @@ public:
 
         @see Font
     */
-    void setFont (float newFontHeight, int fontStyleFlags = Font::plain);
+    void setFont (float newFontHeight, const String& newTypefaceStyle = Font::getDefaultStyle());
 
     /** Returns the currently selected font. */
     Font getCurrentFont() const;
