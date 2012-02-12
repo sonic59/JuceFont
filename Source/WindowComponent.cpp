@@ -103,6 +103,7 @@ WindowComponent::WindowComponent ()
     slHeight->setSliderStyle (Slider::LinearBar);
     slHeight->setTextBoxStyle (Slider::TextBoxLeft, false, 80, 20);
     slHeight->addListener (this);
+    slHeight->setValue(15.0);
 
 
     //[UserPreSize]
@@ -190,6 +191,9 @@ void WindowComponent::sliderValueChanged (Slider* sliderThatWasMoved)
     if (sliderThatWasMoved == slHeight)
     {
         //[UserSliderCode_slHeight] -- add your slider handling code here..
+        font.setHeight((float)slHeight->getValue());
+        lblSample->setFont(font);
+        txtSample->applyFontToAllText(font);
         //[/UserSliderCode_slHeight]
     }
 
