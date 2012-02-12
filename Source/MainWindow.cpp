@@ -17,8 +17,10 @@ MainAppWindow::MainAppWindow()
                       Colours::lightgrey,
                       DocumentWindow::allButtons)
 {
-    centreWithSize (500, 400);
-    setVisible (true);
+    windowComp = new WindowComponent();
+    this->setContentNonOwned(windowComp, false);
+    this->centreWithSize(480, 300);
+    this->setVisible (true);
 }
 
 MainAppWindow::~MainAppWindow()
