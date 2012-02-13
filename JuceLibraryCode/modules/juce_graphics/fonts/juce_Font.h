@@ -169,7 +169,7 @@ public:
 
         @see setTypefaceStyle
     */
-    static const String& Font::getDefaultStyle();
+    static const String& getDefaultStyle();
 
     /** Returns the default system typeface for the given font. */
     static Typeface::Ptr getDefaultTypefaceForFont (const Font& font);

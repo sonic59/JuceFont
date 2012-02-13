@@ -33,42 +33,20 @@
 
 namespace CoreTextTypeLayout
 {
-    CTFontRef createCTFont (const Font& font, float fontSize, bool& needsItalicTransform)
+    CTFontRef createCTFont (const Font& font, float fontSize)
     {
-        CFStringRef cfName = font.getTypefaceName().toCFString();
-        CTFontRef ctFontRef = CTFontCreateWithName (cfName, fontSize, nullptr);
-        CFRelease (cfName);
-
-        if (ctFontRef != nullptr)
-        {
-            if (font.isItalic())
-            {
-                CTFontRef newFont = CTFontCreateCopyWithSymbolicTraits (ctFontRef, 0.0f, nullptr,
-                                                                        kCTFontItalicTrait, kCTFontItalicTrait);
-
-                if (newFont != nullptr)
-                {
-                    CFRelease (ctFontRef);
-                    ctFontRef = newFont;
-                }
-                else
-                {
-                    needsItalicTransform = true; // couldn't find a proper italic version, so fake it with a transform..
-                }
-            }
-
-            if (font.isBold())
-            {
-                CTFontRef newFont = CTFontCreateCopyWithSymbolicTraits (ctFontRef, 0.0f, nullptr,
-                                                                        kCTFontBoldTrait, kCTFontBoldTrait);
-                if (newFont != nullptr)
-                {
-                    CFRelease (ctFontRef);
-                    ctFontRef = newFont;
-                }
-            }
-        }
-
+        CFStringRef cfFontFamily = font.getTypefaceFamily().toCFString();
+        CFStringRef cfFontStyle = font.getTypefaceStyle().toCFString();
+        CFStringRef keys[] = { kCTFontFamilyNameAttribute, kCTFontStyleNameAttribute };
+        CFTypeRef values[] = { cfFontFamily, cfFontStyle };
+        CFDictionaryRef fontDescAttributes = CFDictionaryCreate (nullptr, (const void**) &keys, (const void**) &values, numElementsInArray (keys),
+                                                   &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        CFRelease (cfFontStyle);
+        CFRelease (cfFontFamily);
+        CTFontDescriptorRef ctFontDescRef = CTFontDescriptorCreateWithAttributes (fontDescAttributes);
+        CFRelease (fontDescAttributes);
+        CTFontRef ctFontRef = CTFontCreateWithFontDescriptor (ctFontDescRef, fontSize, nullptr);
+        CFRelease (ctFontDescRef);
         return ctFontRef;
     }
 
@@ -78,8 +56,7 @@ namespace CoreTextTypeLayout
 
         if (factor == 0) // (This factor seems to be a constant for all fonts..)
         {
-            bool needsItalicTransform = false;
-            CTFontRef tempFont = createCTFont (font, 1024, needsItalicTransform);
+            CTFontRef tempFont = createCTFont (font, 1024);
             CGFontRef cgFontRef = CTFontCopyGraphicsFont (tempFont, nullptr);
             const int totalHeight = std::abs (CGFontGetAscent (cgFontRef)) + std::abs (CGFontGetDescent (cgFontRef));
             factor = CGFontGetUnitsPerEm (cgFontRef) / (float) totalHeight;
@@ -169,9 +146,7 @@ namespace CoreTextTypeLayout
             if (attr->getFont() != nullptr)
             {
                 const Font& f = *attr->getFont();
-                bool needsItalicTransform = false;
-                CTFontRef ctFontRef = createCTFont (f, f.getHeight() * getFontHeightToCGSizeFactor (f),
-                                                    needsItalicTransform);
+                CTFontRef ctFontRef = createCTFont (f, f.getHeight() * getFontHeightToCGSizeFactor (f));
 
                 CFAttributedStringSetAttribute (attribString, CFRangeMake (range.getStart(), range.getLength()),
                                                 kCTFontAttributeName, ctFontRef);
@@ -352,17 +327,21 @@ namespace CoreTextTypeLayout
                 CTFontRef ctRunFont;
                 if (CFDictionaryGetValueIfPresent (runAttributes, kCTFontAttributeName, (const void **) &ctRunFont))
                 {
-                    CFStringRef cfsFontName = CTFontCopyPostScriptName (ctRunFont);
-                    CTFontRef ctFontRef = CTFontCreateWithName (cfsFontName, 1024, nullptr);
+                    CTFontDescriptorRef ctFontDescRef = CTFontCopyFontDescriptor (ctRunFont);
+                    CFDictionaryRef fontDescAttributes = CTFontDescriptorCopyAttributes (ctFontDescRef);
+                    CTFontRef ctFontRef = CTFontCreateWithFontDescriptor (ctFontDescRef, 1024, nullptr);
+                    CFRelease (ctFontDescRef);
                     CGFontRef cgFontRef = CTFontCopyGraphicsFont (ctFontRef, nullptr);
                     CFRelease (ctFontRef);
                     const int totalHeight = std::abs (CGFontGetAscent (cgFontRef)) + std::abs (CGFontGetDescent (cgFontRef));
                     const float fontHeightToCGSizeFactor = CGFontGetUnitsPerEm (cgFontRef) / (float) totalHeight;
                     CGFontRelease (cgFontRef);
 
-                    glyphRun->font = Font (String::fromCFString (cfsFontName),
-                                           CTFontGetSize (ctRunFont) / fontHeightToCGSizeFactor, 0); // XXX bold/italic flags?
-                    CFRelease (cfsFontName);
+                    CFStringRef cfsFontFamily = (CFStringRef) CFDictionaryGetValue(fontDescAttributes, kCTFontFamilyNameAttribute);
+                    CFStringRef cfsFontStyle = (CFStringRef) CFDictionaryGetValue(fontDescAttributes, kCTFontStyleNameAttribute);
+                    glyphRun->font = Font (CTFontGetSize (ctRunFont) / fontHeightToCGSizeFactor,
+                                           String::fromCFString (cfsFontFamily), String::fromCFString (cfsFontStyle));
+                    CFRelease (fontDescAttributes);
                 }
 
                 CGColorRef cgRunColor;
@@ -395,7 +374,7 @@ class OSXTypeface  : public Typeface
 {
 public:
     OSXTypeface (const Font& font)
-        : Typeface (font.getTypefaceName()),
+        : Typeface (font.getTypefaceFamily(), font.getTypefaceStyle()),
           fontRef (nullptr),
           fontHeightToCGSizeFactor (1.0f),
           renderingTransform (CGAffineTransformIdentity),
@@ -404,8 +383,7 @@ public:
           ascent (0.0f),
           unitsToHeightScaleFactor (0.0f)
     {
-        bool needsItalicTransform = false;
-        ctFontRef = CoreTextTypeLayout::createCTFont (font, 1024.0f, needsItalicTransform);
+        ctFontRef = CoreTextTypeLayout::createCTFont (font, 1024.0f);
 
         if (ctFontRef != nullptr)
         {
@@ -414,12 +392,6 @@ public:
             ascent /= totalSize;
 
             pathTransform = AffineTransform::identity.scale (1.0f / totalSize, 1.0f / totalSize);
-
-            if (needsItalicTransform)
-            {
-                pathTransform = pathTransform.sheared (-0.15f, 0.0f);
-                renderingTransform.c = 0.15f;
-            }
 
             fontRef = CTFontCopyGraphicsFont (ctFontRef, nullptr);
 
@@ -615,7 +587,7 @@ class OSXTypeface  : public Typeface
 {
 public:
     OSXTypeface (const Font& font)
-        : Typeface (font.getTypefaceName())
+        : Typeface (font.getTypefaceFamily(), font.getTypefaceStyle())
     {
         JUCE_AUTORELEASEPOOL
         renderingTransform = CGAffineTransformIdentity;
@@ -1057,7 +1029,7 @@ Typeface::Ptr Typeface::createSystemTypefaceFor (const Font& font)
     return new OSXTypeface (font);
 }
 
-StringArray Font::findAllTypefaceNames()
+StringArray Font::findAllTypefaceFamilies()
 {
     StringArray names;
 
@@ -1074,6 +1046,12 @@ StringArray Font::findAllTypefaceNames()
 
     names.sort (true);
     return names;
+}
+      
+StringArray Font::findAllTypefaceStyles(const String& family)
+{
+    StringArray styles;
+    return styles;
 }
 
 struct DefaultFontNames
@@ -1099,14 +1077,17 @@ Typeface::Ptr Font::getDefaultTypefaceForFont (const Font& font)
 {
     static DefaultFontNames defaultNames;
 
-    String faceName (font.getTypefaceName());
+    String family (font.getTypefaceFamily());
+    String style (font.getTypefaceStyle());
 
-    if (faceName == Font::getDefaultSansSerifFontName())       faceName = defaultNames.defaultSans;
-    else if (faceName == Font::getDefaultSerifFontName())      faceName = defaultNames.defaultSerif;
-    else if (faceName == Font::getDefaultMonospacedFontName()) faceName = defaultNames.defaultFixed;
+    if (family == Font::getDefaultSansSerifFamily())       family = defaultNames.defaultSans;
+    else if (family == Font::getDefaultSerifFamily())      family = defaultNames.defaultSerif;
+    else if (family == Font::getDefaultMonospacedFamily()) family = defaultNames.defaultFixed;
+    if (style == Font::getDefaultStyle())                  style  = "Regular";
 
     Font f (font);
-    f.setTypefaceName (faceName);
+    f.setTypefaceFamily (family);
+    f.setTypefaceStyle (style);
     return Typeface::createSystemTypefaceFor (f);
 }
 

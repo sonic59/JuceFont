@@ -152,9 +152,9 @@ void Typeface::setTypefaceCacheSize (int numFontsToCache)
 
 //==============================================================================
 Font::SharedFontInternal::SharedFontInternal (const float height_, const String& typefaceStyle_) noexcept
-    : height (height_),
-      typefaceFamily (Font::getDefaultSansSerifFamily()),
+    : typefaceFamily (Font::getDefaultSansSerifFamily()),
       typefaceStyle (typefaceStyle_),
+      height (height_),
       horizontalScale (1.0f),
       kerning (0),
       ascent (0),
@@ -165,9 +165,9 @@ Font::SharedFontInternal::SharedFontInternal (const float height_, const String&
 }
 
 Font::SharedFontInternal::SharedFontInternal (const float height_, const String& typefaceFamily_, const String& typefaceStyle_) noexcept
-    : height (height_),
-      typefaceFamily (typefaceFamily_),
+    : typefaceFamily (typefaceFamily_),
       typefaceStyle (typefaceStyle_),
+      height (height_),
       horizontalScale (1.0f),
       kerning (0),
       ascent (0),
@@ -177,9 +177,9 @@ Font::SharedFontInternal::SharedFontInternal (const float height_, const String&
 }
 
 Font::SharedFontInternal::SharedFontInternal (const Typeface::Ptr& typeface_) noexcept
-    : height (FontValues::defaultFontHeight),
-      typefaceFamily (typeface_->getFamily()),
+    : typefaceFamily (typeface_->getFamily()),
       typefaceStyle (typeface_->getStyle()),
+      height (FontValues::defaultFontHeight),
       horizontalScale (1.0f),
       kerning (0),
       ascent (0),
@@ -189,9 +189,9 @@ Font::SharedFontInternal::SharedFontInternal (const Typeface::Ptr& typeface_) no
 }
 
 Font::SharedFontInternal::SharedFontInternal (const SharedFontInternal& other) noexcept
-    : height (other.height),
-      typefaceFamily (other.typefaceFamily),
+    : typefaceFamily (other.typefaceFamily),
       typefaceStyle (other.typefaceStyle),
+      height (other.height),
       horizontalScale (other.horizontalScale),
       kerning (other.kerning),
       ascent (other.ascent),
