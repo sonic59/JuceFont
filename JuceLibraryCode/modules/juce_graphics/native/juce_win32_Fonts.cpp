@@ -170,9 +170,6 @@ StringArray Font::findAllTypefaceStyles(const String& family)
 
                 String style (styleName);
 
-                // For unknown reasons, has multiple styles named "Narrow". These styles don't show up in any
-                // other software or in any other fonts families. We will ignore them.
-                if (style == "Narrow") continue;
                 // DirectWrite automatically adds extra bold and oblique font styles which are algorithmic
                 // style simulations. These styles don't show up in any other software. We will ignore them.
                 if (dwFont->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) continue;
