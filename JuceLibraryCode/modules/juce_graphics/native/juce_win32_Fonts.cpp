@@ -170,6 +170,10 @@ StringArray Font::findAllTypefaceStyles(const String& family)
 
                 String style (styleName);
 
+                // For unknown reasons, DirectWrite does not enumerate the Arial Narrow fonts properly.
+                // It uses the same style name "Narrow" for all four fonts. Since only one of these fonts
+                // is accessible, we will ignore the duplicates.
+                if (style == "Narrow" && results.contains("Narrow")) continue;
                 // DirectWrite automatically adds extra bold and oblique font styles which are algorithmic
                 // style simulations. These styles don't show up in any other software. We will ignore them.
                 if (dwFont->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) continue;
