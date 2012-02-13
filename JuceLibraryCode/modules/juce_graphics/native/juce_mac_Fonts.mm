@@ -561,7 +561,18 @@ private:
 StringArray Font::findAllTypefaceFamilies()
 {
     StringArray names;
-
+    #if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_5 && ! JUCE_IOS
+    // CTFontManager only exists on OS X 10.6 and later, it does not exist on iOS
+    CFArrayRef fontFamilyArray = CTFontManagerCopyAvailableFontFamilyNames();
+    for (CFIndex i = 0; i < CFArrayGetCount (fontFamilyArray); ++i)
+    {
+        CFStringRef cfsFontFamily = (CFStringRef) CFArrayGetValueAtIndex (fontFamilyArray, i);
+        // CTFontManager includes some fonts that start with . which we should not be displaying
+        if (String::fromCFString (cfsFontFamily).startsWith(".")) continue;
+        names.add (String::fromCFString (cfsFontFamily));
+    }
+    CFRelease (fontFamilyArray);
+    #else   
     CTFontCollectionRef fontCollectionRef = CTFontCollectionCreateFromAvailableFonts (nullptr);
 	CFArrayRef fontDescriptorArray = CTFontCollectionCreateMatchingFontDescriptors (fontCollectionRef);
     CFRelease (fontCollectionRef);
@@ -572,9 +583,9 @@ StringArray Font::findAllTypefaceFamilies()
         // Every font face is returned, we need to prevent duplicate font families from being added to the list
         if (names.contains(String::fromCFString (cfsFontFamily)) == false) names.add (String::fromCFString (cfsFontFamily));
 		CFRelease (cfsFontFamily);
-    }	
+    }
 	CFRelease (fontDescriptorArray);
-    
+    #endif
     names.sort (true);
     return names;
 }
