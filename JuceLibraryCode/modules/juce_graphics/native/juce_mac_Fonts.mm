@@ -658,41 +658,11 @@ public:
         bool needsItalicTransform = false;
 
 #if JUCE_IOS
-        NSString* fontName = juceStringToNS (font.getTypefaceName());
-
-        if (font.isItalic() || font.isBold())
-        {
-            NSArray* familyFonts = [UIFont fontNamesForFamilyName: juceStringToNS (font.getTypefaceName())];
-
-            for (NSString* i in familyFonts)
-            {
-                const String fn (nsStringToJuce (i));
-                const String afterDash (fn.fromFirstOccurrenceOf ("-", false, false));
-
-                const bool probablyBold = afterDash.containsIgnoreCase ("bold") || fn.endsWithIgnoreCase ("bold");
-                const bool probablyItalic = afterDash.containsIgnoreCase ("oblique")
-                                             || afterDash.containsIgnoreCase ("italic")
-                                             || fn.endsWithIgnoreCase ("oblique")
-                                             || fn.endsWithIgnoreCase ("italic");
-
-                if (probablyBold == font.isBold()
-                     && probablyItalic == font.isItalic())
-                {
-                    fontName = i;
-                    needsItalicTransform = false;
-                    break;
-                }
-                else if (probablyBold && (! probablyItalic) && probablyBold == font.isBold())
-                {
-                    fontName = i;
-                    needsItalicTransform = true; // not ideal, so carry on in case we find a better one
-                }
-            }
-
-            if (needsItalicTransform)
-                renderingTransform.c = 0.15f;
-        }
-
+        String style = font.getTypefaceStyle();
+        // Fonts style names on Cocoa Touch are unusual like "Arial-BoldMT"
+        // No font will be found for the style of "Bold" so we must modfiy the style 
+        if (style == "Bold") style = font.getTypefaceFamily() + "-Bold";
+        NSString* fontName = juceStringToNS (style);
         fontRef = CGFontCreateWithFontName ((CFStringRef) fontName);
 
         if (fontRef == 0)
@@ -1168,8 +1138,12 @@ Typeface::Ptr Font::getDefaultTypefaceForFont (const Font& font)
     if (family == Font::getDefaultSansSerifFamily())       family = defaultNames.defaultSans;
     else if (family == Font::getDefaultSerifFamily())      family = defaultNames.defaultSerif;
     else if (family == Font::getDefaultMonospacedFamily()) family = defaultNames.defaultFixed;
-    // TODO: Handle Cocoa Touch Font Styles
     if (style == Font::getDefaultStyle())                  style  = "Regular";
+    // Fonts style names on Cocoa Touch are unusual like "Arial-BoldMT"
+    // No font will be found for the style of "Regular" so we must modfiy the style 
+    #if JUCE_IOS && ! JUCE_CORETEXT_AVAILABLE
+    if (style  == "Regular")                               style  = family;
+    #endif
 
     Font f (font);
     f.setTypefaceFamily (family);
