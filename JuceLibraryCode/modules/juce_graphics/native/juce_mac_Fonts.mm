@@ -655,8 +655,6 @@ public:
         JUCE_AUTORELEASEPOOL
         renderingTransform = CGAffineTransformIdentity;
 
-        bool needsItalicTransform = false;
-
 #if JUCE_IOS
         String style = font.getTypefaceStyle();
         // Fonts style names on Cocoa Touch are unusual like "Arial-BoldMT"
@@ -678,21 +676,11 @@ public:
         unitsToHeightScaleFactor = 1.0f / totalHeight;
         fontHeightToCGSizeFactor = CGFontGetUnitsPerEm (fontRef) / totalHeight;
 #else
-        nsFont = [NSFont fontWithName: juceStringToNS (font.getTypefaceName()) size: 1024];
-
-        if (font.isItalic())
-        {
-            NSFont* newFont = [[NSFontManager sharedFontManager] convertFont: nsFont
-                                                                 toHaveTrait: NSItalicFontMask];
-
-            if (newFont == nsFont)
-                needsItalicTransform = true; // couldn't find a proper italic version, so fake it with a transform..
-
-            nsFont = newFont;
-        }
-
-        if (font.isBold())
-            nsFont = [[NSFontManager sharedFontManager] convertFont: nsFont toHaveTrait: NSBoldFontMask];
+        NSDictionary* nsDict = [NSDictionary dictionaryWithObjectsAndKeys:
+                                juceStringToNS (font.getTypefaceFamily()), NSFontFamilyAttribute, 
+                                juceStringToNS (font.getTypefaceStyle()), NSFontFaceAttribute, nil];
+        NSFontDescriptor* nsFontDesc = [NSFontDescriptor fontDescriptorWithFontAttributes:nsDict];
+        nsFont = [NSFont fontWithDescriptor: nsFontDesc size: 1024];
 
         [nsFont retain];
 
@@ -701,12 +689,6 @@ public:
         ascent /= totalSize;
 
         pathTransform = AffineTransform::identity.scale (1.0f / totalSize, 1.0f / totalSize);
-
-        if (needsItalicTransform)
-        {
-            pathTransform = pathTransform.sheared (-0.15f, 0.0f);
-            renderingTransform.c = 0.15f;
-        }
 
       #if SUPPORT_ONLY_10_4_FONTS
         ATSFontRef atsFont = ATSFontFindFromName ((CFStringRef) [nsFont fontName], kATSOptionFlagsDefault);
